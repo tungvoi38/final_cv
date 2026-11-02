@@ -1,0 +1,13 @@
+schema_version: 1
+status: proposed
+contract_version: 0.1-proposed
+environment: local
+paths:
+  dataset: ${GEOID_DATA_ROOT:-data/raw/geoid-flood}
+  checkpoints: ${GEOID_CHECKPOINT_ROOT:-checkpoints}
+  runs: ${GEOID_RUN_ROOT:-outputs/runs}
+device: auto
+precision: auto
+checkpoint_every_epochs: 1
+resume: null
+tracking: {backend: json, uri: null}

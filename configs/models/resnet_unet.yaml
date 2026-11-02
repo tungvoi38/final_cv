@@ -1,0 +1,13 @@
+schema_version: 1
+status: proposed
+contract_version: 0.1-proposed
+model: resnet_unet
+backbone: ResNet50
+pretraining_source: ImageNet
+checkpoint: null
+input_modalities: [sar, optical, dem]
+fusion: early
+num_classes: 3
+adapters:
+  alignment: pending_approval
+  temporal_sar: pending_verification

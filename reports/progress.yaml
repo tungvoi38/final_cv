@@ -1,0 +1,62 @@
+schema_version: 1
+milestone: M0 Repository Infrastructure
+overall_status: Infrastructure implemented locally; integration and scientific approval pending
+components:
+  - name: Repository and Colab infrastructure
+    status: Tested
+    evidence: Local synthetic and CLI validation; see reports/HANDOFF.md. GPU integration untested.
+  - name: Dataset acquisition
+    status: Not started
+    evidence: Acquisition safeguards tested; no actual dataset acquired or revision approved
+  - name: Data sampling
+    status: Not started
+    evidence: Research implementation absent; bootstrap interfaces only
+  - name: SAR preprocessing
+    status: Not started
+    evidence: Research implementation absent; bootstrap interfaces only
+  - name: Optical preprocessing
+    status: Not started
+    evidence: Research implementation absent; bootstrap interfaces only
+  - name: DEM preprocessing
+    status: Not started
+    evidence: Research implementation absent; bootstrap interfaces only
+  - name: Augmentation
+    status: Not started
+    evidence: Research implementation absent; bootstrap interfaces only
+  - name: Early fusion
+    status: Not started
+    evidence: Research implementation absent; bootstrap interfaces only
+  - name: Intermediate fusion
+    status: Not started
+    evidence: Research implementation absent; bootstrap interfaces only
+  - name: ResNet50-U-Net
+    status: Not started
+    evidence: Research implementation absent; bootstrap interfaces only
+  - name: TerraMind-B
+    status: Not started
+    evidence: Research implementation absent; bootstrap interfaces only
+  - name: MixStyle
+    status: Not started
+    evidence: Research implementation absent; bootstrap interfaces only
+  - name: Deep CORAL
+    status: Not started
+    evidence: Research implementation absent; bootstrap interfaces only
+  - name: Class-conditional CORAL
+    status: Not started
+    evidence: Research implementation absent; bootstrap interfaces only
+  - name: Trainer
+    status: Not started
+    evidence: Runtime and checkpoint utilities tested; no training loop or models implemented
+  - name: Evaluation
+    status: Not started
+    evidence: Research implementation absent; bootstrap interfaces only
+  - name: Experiment tracking
+    status: Not started
+    evidence: JSON metadata writer tested; no experiment runs or MLflow adapter
+blockers:
+  - Select and verify immutable dataset revision and file checksums.
+  - Audit official event overlap before approving the unseen-event protocol.
+  - Approve ADR-0001 through ADR-0004 before research implementation; review ADR-0005 runtime support.
+  - Configure and verify GitHub protections, team identities and reviewer permissions.
+  - MLflow and actual experiment records are unavailable.
+completed_tasks: []
