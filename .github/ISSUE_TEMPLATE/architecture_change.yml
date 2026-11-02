@@ -1,0 +1,31 @@
+name: Architecture or methodology change
+description: An L2/L3 proposal requiring Lead review
+body:
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope and responsible developer
+      description: Include role, affected modules, dependencies and agent attribution if known.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Context and evidence
+      description: Task rationale or reproduction steps, expected and actual behavior; no credentials.
+    validations:
+      required: true
+  - type: textarea
+    id: decision
+    attributes:
+      label: Architecture and research impact
+      description: L0-L3, ADR references, protocol impact, required approvals and alternatives.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria and verification
+      description: Observable outcomes, tests and dependencies; closure alone is not validation.
+    validations:
+      required: true

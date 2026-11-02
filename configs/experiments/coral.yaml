@@ -1,0 +1,12 @@
+schema_version: 1
+status: proposed
+contract_version: 0.1-proposed
+experiment: coral
+data_config: configs/data/geoid.yaml
+model_config: configs/models/resnet_unet.yaml
+dg_method: coral
+seed: 42  # Proposed smoke seed; approved multi-seed plan is still required.
+loss: {segmentation: ce_plus_dice, dg_weight: null, dice_smoothing: null}
+hyperparameters: {learning_rate: null, batch_size: null, epochs: null}
+evaluation_protocol: event_macro_v0_proposed
+selection_metric: val_event_macro_flood_iou

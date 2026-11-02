@@ -1,0 +1,13 @@
+schema_version: 1
+status: proposed
+contract_version: 0.1-proposed
+environment: colab
+paths:
+  dataset: ${GEOID_DATA_ROOT:-/content/drive/MyDrive/geoid-flood/data/raw/geoid-flood}
+  checkpoints: ${GEOID_CHECKPOINT_ROOT:-/content/drive/MyDrive/geoid-flood/checkpoints}
+  runs: ${GEOID_RUN_ROOT:-/content/drive/MyDrive/geoid-flood/runs}
+device: cuda
+precision: auto
+checkpoint_every_epochs: 1
+resume: null
+tracking: {backend: json, uri: null}

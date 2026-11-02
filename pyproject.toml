@@ -1,0 +1,35 @@
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "geoid-dg"
+version = "0.1.0"
+description = "Research infrastructure for multimodal flood domain generalization"
+readme = "README.md"
+requires-python = ">=3.11,<3.13"
+dependencies = ["numpy>=1.26,<3", "PyYAML>=6.0.2,<7"]
+
+[dependency-groups]
+dev = ["pytest>=8.3,<10", "ruff>=0.11,<1"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/geoid"]
+
+[tool.uv]
+# Rebuild non-editable local installs when source changes, including on Windows.
+cache-keys = [{ file = "pyproject.toml" }, { file = "README.md" }, { file = "src/**/*.py" }]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.ruff.format]
+quote-style = "double"

@@ -1,0 +1,24 @@
+schema_version: 1
+status: proposed
+contract_version: 0.1-proposed
+dataset_name: GEOID-Flood
+source: https://huggingface.co/datasets/links-ads/geoid-flood
+revision: null  # Research Lead must select an immutable revision.
+raw_root: data/raw/geoid-flood
+processed_root: data/processed
+modalities: {sar: 4, optical: 12, dem: 1}
+sar_product: null
+optical_band_order: null
+chip_size: 256
+train_stride: 128
+eval_stride: 256
+normalization: {strategy: pending_approval, fit_split: train, statistics_manifest: null}
+class_mapping: {0: background, 1: permanent_water, 2: flooded_water}
+ignore_index: 255
+num_classes: 3
+split_protocol: official_pending_event_audit
+missing_data_policy: pending_approval
+acquisition:
+  revision: null
+  files: []  # Verified explicit selection only; no wildcards or automatic full download.
+  sample_max_bytes: 104857600
