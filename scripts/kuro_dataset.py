@@ -232,7 +232,30 @@ def read_sample(path, row):
     return arrays, flags, profiles
 
 
-def preprocess(arrays, flags, profiles):
+def multiplicative_sar_noise(sar, input_valid, std):
+    """Independent Gamma factors per time/band/pixel, on valid linear power only.
+
+    Unit mean, std=std; this is an augmentation, not an estimated sensor model.
+    Uses the CPU torch RNG (including DataLoader worker seeds). Never mutates raw.
+    """
+    import torch
+
+    if not np.isfinite(std) or not 0.001 <= std <= 1:
+        raise ValueError("noise_std must be finite and in [0.001, 1]")
+    result = sar.copy()
+    selected = sar[..., input_valid]
+    if selected.size == 0:
+        return result
+    concentration = torch.tensor(1.0 / std**2, dtype=torch.float64, device="cpu")
+    factors = torch.distributions.Gamma(concentration, concentration).sample(selected.shape)
+    perturbed = (selected.astype(np.float64) * factors.numpy()).astype(np.float32)
+    if not (np.isfinite(perturbed) & (perturbed > 0)).all():
+        raise ValueError("SAR noise produced nonfinite/nonpositive power; reduce noise_std")
+    result[..., input_valid] = perturbed
+    return result
+
+
+def preprocess(arrays, flags, profiles, *, noise_std=None):
     """Source masks control input validity; labels never alter input pixels."""
     sar = np.stack([arrays[t] for t in TIMES]).astype(np.float32)
     dem = arrays["dem"].astype(np.float32)
@@ -253,6 +276,8 @@ def preprocess(arrays, flags, profiles):
         dem_ok &= dem != nd
     input_valid = (mna == 1) & sar_ok.all(axis=(0, 1)) & dem_ok.all(axis=0)
     valid = input_valid & (label != 3)
+    if noise_std is not None:
+        sar = multiplicative_sar_noise(sar, input_valid, noise_std)
     sar_db = np.zeros_like(sar)
     np.log10(sar, out=sar_db, where=sar_ok)
     sar_db *= 10
@@ -399,14 +424,24 @@ class KuroDataset:
 
     Pass one RawArchive instance to train/validation/test to hash raw only once.
     Augmentation uses torch RNG; trainer controls seeds and worker seeding.
+    sar_noise defaults off; when on, noise_p is per sample and noise_std is the
+    Gamma multiplier std (not a +/- bound). D4 is controlled independently by
+    augment. Save augmentation_config with runs. Noise never runs on val/test.
     """
 
-    def __init__(self, raw, split, augment=False):
-        self.archive = raw if isinstance(raw, RawArchive) else RawArchive(raw)
+    def __init__(self, raw, split, augment=False, *, sar_noise=False, noise_p=0.3, noise_std=0.05):
         if split not in EXPECTED_COUNTS:
             raise ValueError("split must be train, validation or test")
-        if augment and split != "train":
+        if (augment or sar_noise) and split != "train":
             raise ValueError("Augmentation is allowed only for train")
+        if not np.isfinite(noise_p) or not 0 <= noise_p <= 1:
+            raise ValueError("noise_p must be finite and in [0, 1]")
+        if not np.isfinite(noise_std) or not 0.001 <= noise_std <= 1:
+            raise ValueError("noise_std must be finite and in [0.001, 1]")
+        self.sar_noise = bool(sar_noise)
+        self.noise_p = float(noise_p)
+        self.noise_std = float(noise_std)
+        self.archive = raw if isinstance(raw, RawArchive) else RawArchive(raw)
         self.rows = self.archive.frame[
             self.archive.frame["tortilla:data_split"] == split
         ].reset_index(drop=True)
@@ -415,11 +450,32 @@ class KuroDataset:
     def __len__(self):
         return len(self.rows)
 
-    def physical(self, index):
+    @property
+    def augmentation_config(self):
+        """Save with each training run; global CONFIG describes unaugmented preprocessing."""
+        return {
+            "version": "kuro-augmentation-v1",
+            "d4": bool(self.augment),
+            "sar_noise": self.sar_noise,
+            "noise_p": self.noise_p,
+            "noise_std": self.noise_std,
+            "distribution": "Gamma(shape=1/std**2, rate=1/std**2)",
+            "coupling": "independent per time, band and valid pixel",
+            "scope": "train only; linear power before dB; per-sample application probability",
+        }
+
+    def physical(self, index, *, apply_noise=False):
+        """Unaugmented physical sample by default; opt in to configured train noise."""
         self.archive.check_unchanged()
         row = self.rows.iloc[index]
         arrays, flags, profiles = read_sample(self.archive.path, row)
-        sample = preprocess(arrays, flags, profiles)
+        noise_std = None
+        if apply_noise and self.sar_noise and self.noise_p > 0:
+            import torch
+
+            if self.noise_p == 1 or torch.rand(()).item() < self.noise_p:
+                noise_std = self.noise_std
+        sample = preprocess(arrays, flags, profiles, noise_std=noise_std)
         validate_arrays(sample)
         record = row_record(row)
         return {
@@ -430,10 +486,10 @@ class KuroDataset:
     def __getitem__(self, index):
         import torch
 
-        sample = self.physical(index)
-        transformed = transform_sample(
-            sample, int(torch.randint(8, ()).item()) if self.augment else 0
-        )
+        # Draw geometry before noise so paired first samples use the same D4 for a seed.
+        d4 = int(torch.randint(8, ()).item()) if self.augment else 0
+        sample = self.physical(index, apply_noise=True)
+        transformed = transform_sample(sample, d4)
         return {
             "sar": torch.from_numpy(transformed["sar"]),
             "dem": torch.from_numpy(transformed["dem"]),
