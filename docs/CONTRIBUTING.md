@@ -50,7 +50,9 @@ uv run --locked --no-editable python scripts/generate_report.py
 Definition of Done: scope and issue clear; reviewed contracts/ADRs; attribution and
 observable decisions recorded; tests actually executed with outcomes; relevant
 synthetic and integrity checks passing; docs/configs consistent; no data/secrets;
-known limitations explicit; human review and CI complete before integration.
+known limitations explicit; human review and relevant local checks complete before integration.
+GitHub Actions workflows are manual-only (`workflow_dispatch`); run them explicitly
+when useful. Pushes, PRs and schedules do not run repository workflows.
 Passing infrastructure tests does not mean experimentally validated.
 
 ## Manual GitHub setup (not applied)
@@ -60,12 +62,29 @@ before changing settings. No authenticated API/CLI inspection was available duri
 bootstrap; protection, Actions permissions and owner access are unverified.
 
 Protect main: require PRs, at least one approval, code-owner review, stale approval
-dismissal, conversation resolution and status checks named ci and governance.
-Require up-to-date branches; prohibit force pushes/deletion and direct bypasses,
+dismissal and conversation resolution. In Settings > Branches, edit applicable
+branch protection rules and remove required status checks `ci` and `governance`
+(displayed as CI / ci and Governance / governance). If no other checks are required,
+disable "Require status checks to pass before merging". In Settings > Rules >
+Rulesets, remove the same required checks and any required workflows that enforce
+these manual-only workflows. Organization-managed rules need an organization admin.
+Do not require these manual workflows for merging: they no longer run on PRs.
+Prohibit force pushes/deletion and direct bypasses,
 including administrators where supported. Restrict review dismissal. CODEOWNERS
 must exist on the base branch. First bootstrap merge needs explicit manual review.
 A Lead-authored PR cannot be self-approved: appoint another authorized human or
 agree a documented review process before enabling rules that would deadlock it.
+
+No repository-defined Copilot CI-fix automation was found. To disable hosted
+Agent Merge defaults, open personal Settings > Copilot > Cloud and turn off
+"Enable Agent Merge automatically for pull requests I create" and "Fix failed
+Actions workflows". For PRs already watched, click "Unassign Copilot" in the merge
+box. Repository administrators can also disable the repository's Copilot
+"Enable automations" policy. These hosted settings have not been inspected or
+changed by this task. See [GitHub's Agent Merge instructions](https://docs.github.com/en/copilot/how-tos/copilot-on-github/use-copilot-agents/watch-and-fix-pull-requests).
+If the repository has an Agents > Automations pane, also disable any hosted
+automation that fixes failed checks or creates repair PRs; these are not necessarily
+stored in repository files. See [Copilot automations](https://docs.github.com/en/copilot/how-tos/use-copilot-agents/cloud-agent/create-automations).
 
 Use read-only default Actions tokens; allow fork workflows only under repository
 policy, without secrets. Never use pull_request_target to run PR code. Report jobs
