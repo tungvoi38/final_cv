@@ -132,7 +132,7 @@ def main():
         if not path.exists():
             raise FileNotFoundError(f'Missing checkpoint {path}')
         model_load(model, path, device)
-        metrics = validate(model, test_dl, device, model_inputs)
+        metrics = validate(model, test_dl, device, model_inputs, cfg.get('loss', 'ce_dice'))
         test_rows.append({'epoch': epoch, **metrics})
     test_history = pd.DataFrame(test_rows)
     test_history.to_csv(output / 'test_by_epoch_DIAGNOSTIC_ONLY.csv', index=False)
@@ -142,7 +142,7 @@ def main():
               {'Validation pooled Flood IoU': combined.pooled_flood_iou_val,
                'Test pooled Flood IoU (diagnostic)': combined.pooled_flood_iou_test},
               'Epoch', 'Pooled Flood IoU')
-    top3 = history.nlargest(3, 'event_macro_flood_iou').merge(
+    top3 = history.nlargest(3, cfg['selection']).merge(
         test_history, on='epoch', suffixes=('_val', '_test'))
     top3.to_csv(output / 'top3_val_selected_test_DIAGNOSTIC_ONLY.csv', index=False)
 
