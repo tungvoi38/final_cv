@@ -1,11 +1,6 @@
 name: Research report
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "0 1 * * 1"
-  push:
-    branches: [main]
-    paths: ["docs/**", "reports/progress.yaml", "src/geoid/tracking/**", "scripts/generate_report.py"]
 permissions:
   contents: read
   issues: read
