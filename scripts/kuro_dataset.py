@@ -185,8 +185,8 @@ def audit_metadata(frame, full=True):
     }
 
 
-def read_sample(path, row):
-    """Read six TIFF payloads without extracting files or retaining GDAL handles."""
+def read_sample(path, row, *, include_labels=True):
+    """Read aligned TIFF payloads, optionally leaving the annotation TIFF unread."""
     base, length = int(row["tortilla:offset"]), int(row["tortilla:length"])
     nested = read_metadata(path, base, length)
     if nested["tortilla:id"].duplicated().any() or set(nested["tortilla:id"]) != set(MODALITIES):
@@ -198,6 +198,8 @@ def read_sample(path, row):
     with Path(path).open("rb") as stream:
         for _, entry in nested.iterrows():
             name = entry["tortilla:id"]
+            if name == "mask" and not include_labels:
+                continue
             offset, size = int(entry["tortilla:offset"]), int(entry["tortilla:length"])
             if offset < 18 or not 0 < size < 32 * 1024**2 or offset + size > length:
                 raise ValueError("Invalid TIFF bounds")
@@ -214,7 +216,7 @@ def read_sample(path, row):
     reference = profiles[TIMES[0]]
     if reference["crs"] == "None":
         raise ValueError("Missing CRS")
-    for name in MODALITIES:
+    for name in arrays:
         p = profiles[name]
         if (
             p["shape"] != [224, 224]
@@ -255,14 +257,11 @@ def multiplicative_sar_noise(sar, input_valid, std):
     return result
 
 
-def preprocess(arrays, flags, profiles, *, noise_std=None):
+def preprocess(arrays, flags, profiles, *, noise_std=None, include_labels=True):
     """Source masks control input validity; labels never alter input pixels."""
     sar = np.stack([arrays[t] for t in TIMES]).astype(np.float32)
     dem = arrays["dem"].astype(np.float32)
-    label = arrays["mask"][0]
     mna = arrays["invalid_data"][0]
-    if not np.isin(label, [0, 1, 2, 3]).all():
-        raise ValueError("Unknown raw label; expected 0/1/2/3 before upstream remapping")
     if not np.isin(mna, [0, 1]).all():
         raise ValueError("Unknown validity-mask encoding")
     sar_ok = np.isfinite(sar) & (sar > 0)
@@ -275,7 +274,6 @@ def preprocess(arrays, flags, profiles, *, noise_std=None):
     if nd is not None and np.isfinite(nd) and nd != 0:
         dem_ok &= dem != nd
     input_valid = (mna == 1) & sar_ok.all(axis=(0, 1)) & dem_ok.all(axis=0)
-    valid = input_valid & (label != 3)
     if noise_std is not None:
         sar = multiplicative_sar_noise(sar, input_valid, noise_std)
     sar_db = np.zeros_like(sar)
@@ -283,14 +281,18 @@ def preprocess(arrays, flags, profiles, *, noise_std=None):
     sar_db *= 10
     sar_db[:, :, ~input_valid] = 0
     dem = np.where(input_valid[None], dem, 0).astype(np.float32)
-    mask = np.where(valid, label, 255).astype(np.uint8)
-    return {
+    result = {
         "sar_db": sar_db,
         "dem_m": dem,
-        "mask": mask,
         "input_valid": input_valid,
-        "valid_mask": valid,
     }
+    if include_labels:
+        label = arrays["mask"][0]
+        if not np.isin(label, [0, 1, 2, 3]).all():
+            raise ValueError("Unknown raw label; expected 0/1/2/3 before upstream remapping")
+        valid = input_valid & (label != 3)
+        result.update(mask=np.where(valid, label, 255).astype(np.uint8), valid_mask=valid)
+    return result
 
 
 def validate_arrays(sample):
@@ -323,6 +325,16 @@ def validate_arrays(sample):
             raise ValueError("Invalid storage fill")
 
 
+def normalize_physical_inputs(sar_db, dem_m, input_valid):
+    norm = CONFIG["normalization"]
+    sar = sar_db - np.array(norm["sar_mean"], np.float32)[None, :, None, None]
+    sar /= np.array(norm["sar_std"], np.float32)[None, :, None, None]
+    dem = (dem_m - norm["dem_mean"]) / norm["dem_std"]
+    sar[:, :, ~input_valid] = 0
+    dem[:, ~input_valid] = 0
+    return sar.astype(np.float32), dem.astype(np.float32)
+
+
 def transform_sample(sample, d4=0):
     """Apply one shared dihedral transform, then fixed external normalization."""
     if d4 not in range(8):
@@ -333,14 +345,9 @@ def transform_sample(sample, d4=0):
         if d4 >= 4:
             value = np.flip(value, axis=-1)
         result[key] = np.ascontiguousarray(value)
-    norm = CONFIG["normalization"]
-    sar = result["sar_db"] - np.array(norm["sar_mean"], np.float32)[None, :, None, None]
-    sar /= np.array(norm["sar_std"], np.float32)[None, :, None, None]
-    dem = (result["dem_m"] - norm["dem_mean"]) / norm["dem_std"]
-    sar[:, :, ~result["input_valid"]] = 0
-    dem[:, ~result["input_valid"]] = 0
-    result["sar"] = sar.astype(np.float32)
-    result["dem"] = dem.astype(np.float32)
+    result["sar"], result["dem"] = normalize_physical_inputs(
+        result["sar_db"], result["dem_m"], result["input_valid"]
+    )
     return result
 
 
