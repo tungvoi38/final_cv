@@ -1,0 +1,16 @@
+{
+  "name": "a3_11ch_sma_eoa_calibrated",
+  "selection": "/DATA/phun/kuro_siwo/eoa/a3-pre-variability-eoa-full20-dBl4IU/comparison/selection.json",
+  "selection_sha256": "587fe79bd46de7759d3c05b3fedb18f7e594d9beca48afe71e309da2e0d5edaa",
+  "validation_bias_lock_sha256": "3e2bde8a88e1bad5aa8fc590242a1c27e22a0f727d6f7fbb2736665dc64f3db8",
+  "bias_selection_metric": "validation_pooled_flood_iou",
+  "flood_logit_bias": 0.95,
+  "validation_metrics": {
+    "pooled_miou": 0.6854819646790786,
+    "pooled_flood_iou": 0.5218958947332462,
+    "pooled_flood_f1": 0.6858496649335173,
+    "event_macro_flood_iou": 0.45794223787228866,
+    "pooled_flood_precision": 0.6910152785906469,
+    "pooled_flood_recall": 0.680760708262386
+  }
+}

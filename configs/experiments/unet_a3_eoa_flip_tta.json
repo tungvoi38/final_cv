@@ -1,0 +1,18 @@
+{
+  "name": "a3_11ch_sma_eoa_calibrated_flip_tta",
+  "selection": "/DATA/phun/kuro_siwo/eoa/a3-pre-variability-eoa-full20-dBl4IU/comparison/selection.json",
+  "selection_sha256": "587fe79bd46de7759d3c05b3fedb18f7e594d9beca48afe71e309da2e0d5edaa",
+  "validation_protocol_sha256": "ecf617c92eb8b3b452ee26c8143f4cd8fe6b141f07948630bd07e11c62bc4c20",
+  "validation_bias_lock_sha256": "ea427fbdd5bf6493b1288a17466e03749e4b9e29ded4f34f9979904cd439533a",
+  "flip_axes": [[], [-1], [-2], [-2, -1]],
+  "bias_selection_metric": "validation_pooled_flood_iou",
+  "flood_logit_bias": 0.95,
+  "validation_metrics": {
+    "pooled_miou": 0.686038357151927,
+    "pooled_flood_iou": 0.5231311552858233,
+    "pooled_flood_f1": 0.6869154418782211,
+    "event_macro_flood_iou": 0.4578044335021576,
+    "pooled_flood_precision": 0.6936422949361669,
+    "pooled_flood_recall": 0.6803178079676143
+  }
+}

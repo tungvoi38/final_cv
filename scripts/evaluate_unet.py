@@ -15,7 +15,7 @@ import pandas as pd
 import torch
 from torch.utils.data import DataLoader
 
-from train_unet import FLOOD, IGNORE, move, validate, seed_everything
+from train_unet import FLOOD, IGNORE, build_model, move, seed_everything, validate
 
 
 def save_json(path, obj):
@@ -109,7 +109,6 @@ def main():
                                 args.bias_step), 6)
     sys.path.insert(0, str(args.repo.resolve() / 'scripts'))
     from kuro_dataset import RawArchive, KuroDataset, model_inputs
-    import segmentation_models_pytorch as smp
     seed_everything(int(cfg['seed']))
     device = torch.device('cuda')
     archive = RawArchive(raw)
@@ -118,8 +117,7 @@ def main():
         return DataLoader(KuroDataset(archive, split), batch_size=bs, shuffle=False,
                           num_workers=args.workers, pin_memory=True)
     val_dl, test_dl = dl('validation'), dl('test')
-    model = smp.Unet('resnet50', encoder_weights=None, in_channels=7,
-                     classes=3, decoder_channels=(256, 128, 64, 32, 16)).to(device)
+    model = build_model(cfg.get('head', 'standard'), encoder_weights=None).to(device)
     output = run / 'diagnostics'
     output.mkdir(exist_ok=True)
 
@@ -188,8 +186,17 @@ def main():
     save_plot(output / 'bias_vs_iou.png', biases,
               {'Validation IoU': val_curve.iou, 'Test pooled IoU (diagnostic)': test_curve.iou},
               'Flood logit bias', 'Flood IoU')
-    report = {'best_checkpoint_epoch_selected_on_validation': int(ck['epoch']),
-              'selection_metric': cfg['selection'], 'validation_selected_bias': selected,
+    best_epoch = int(ck['epoch'])
+    best_test = test_history.loc[test_history.epoch == best_epoch].iloc[0]
+    report = {'best_checkpoint_epoch_selected_on_validation': best_epoch,
+              'selection_metric': cfg['selection'],
+              'test_pooled_miou': float(best_test.pooled_miou),
+              'test_pooled_macro_f1': float(best_test.pooled_macro_f1),
+              'test_pooled_background_f1': float(best_test.pooled_background_f1),
+              'test_pooled_permanent_water_f1': float(best_test.pooled_permanent_water_f1),
+              'test_pooled_flood_f1': float(best_test.pooled_flood_f1),
+              'validation_selected_bias': selected,
+              'test_pooled_flood_f1_with_validation_bias': float(nearest(test_curve, selected).f1),
               'test_pooled_iou_baseline': float(nearest(test_curve, 0).iou),
               'test_pooled_iou_with_validation_bias': float(nearest(test_curve, selected).iou),
               'test_event_iou_std_baseline': float(ev.baseline_iou.std(ddof=0)),
